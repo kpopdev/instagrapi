@@ -7,7 +7,7 @@ from pydantic import (
     FilePath,
     HttpUrl,
     ValidationError,
-    validator,
+    field_validator,
 )
 
 
@@ -17,10 +17,10 @@ class TypesBaseModel(BaseModel):
     )  # (jarrodnorwell) fixed city_id issue
 
 
-def validate_external_url(cls, v):
+def validate_external_url(v):
     if v is None or (v.startswith("http") and "://" in v) or isinstance(v, str):
         return v
-    raise ValidationError("external_url must been URL or string")
+    raise ValueError("external_url must be a valid URL or string")
 
 
 class Resource(TypesBaseModel):
@@ -50,7 +50,7 @@ class Broadcast(TypesBaseModel):
     group_image_background_uri: str
     thread_subtype: int
     number_of_members: int
-    creator_igid: str | None
+    creator_igid: Optional[str] = None
     creator_username: str
 
 
@@ -91,7 +91,7 @@ class User(TypesBaseModel):
     instagram_location_id: Optional[str] = None
     interop_messaging_user_fbid: Optional[str] = None
 
-    _external_url = validator("external_url", allow_reuse=True)(validate_external_url)
+    _validate_external_url = field_validator("external_url")(validate_external_url)
 
 
 class Account(TypesBaseModel):
@@ -109,7 +109,7 @@ class Account(TypesBaseModel):
     gender: Optional[int] = None
     email: Optional[str] = None
 
-    _external_url = validator("external_url", allow_reuse=True)(validate_external_url)
+    _validate_external_url = field_validator("external_url")(validate_external_url)
 
 
 class UserShort(TypesBaseModel):
@@ -127,8 +127,6 @@ class UserShort(TypesBaseModel):
     profile_pic_url: Optional[HttpUrl] = None
     profile_pic_url_hd: Optional[HttpUrl] = None
     is_private: Optional[bool] = None
-    # is_verified: bool  # not found in hashtag_medias_v1
-    # stories: List = [] # not found in fbsearch_suggested_profiles
 
 
 class Usertag(TypesBaseModel):
@@ -151,9 +149,6 @@ class Location(TypesBaseModel):
     lat: Optional[float] = None
     external_id: Optional[int] = None
     external_id_source: Optional[str] = None
-    # address_json: Optional[dict] = {}
-    # profile_pic_url: Optional[HttpUrl]
-    # directory: Optional[dict] = {}
 
 
 class Media(TypesBaseModel):
@@ -163,7 +158,7 @@ class Media(TypesBaseModel):
     taken_at: datetime
     media_type: int
     image_versions2: Optional[dict] = {}
-    product_type: Optional[str] = ""  # igtv or feed
+    product_type: Optional[str] = ""
     thumbnail_url: Optional[HttpUrl] = None
     location: Optional[Location] = None
     user: UserShort
@@ -186,7 +181,6 @@ class Media(TypesBaseModel):
 
 
 class MediaXma(TypesBaseModel):
-    # media_type: int
     video_url: HttpUrl  # for Video and IGTV
     title: Optional[str] = ""
     preview_url: Optional[HttpUrl] = None
@@ -252,9 +246,6 @@ class StoryMention(TypesBaseModel):
 
 
 class StoryMedia(TypesBaseModel):
-    # Instagram does not return the feed_media object when requesting story,
-    # so you will have to make an additional request to get media and this is overhead:
-    # media: Media
     x: float = 0.5
     y: float = 0.4997396
     z: float = 0
@@ -387,9 +378,9 @@ class ReplyMessage(TypesBaseModel):
 
 
 class DirectMessage(TypesBaseModel):
-    id: str  # e.g. 28597946203914980615241927545176064
+    id: str
     user_id: Optional[str] = None
-    thread_id: Optional[int] = None  # e.g. 340282366841710300949128531777654287254
+    thread_id: Optional[int] = None
     timestamp: datetime
     item_type: Optional[str] = None
     is_sent_by_viewer: Optional[bool] = None
@@ -429,8 +420,8 @@ class DirectShortThread(TypesBaseModel):
 
 
 class DirectThread(TypesBaseModel):
-    pk: str  # thread_v2_id, e.g. 17898572618026348
-    id: str  # thread_id, e.g. 340282366841510300949128268610842297468
+    pk: str
+    id: str
     messages: List[DirectMessage]
     users: List[UserShort]
     inviter: Optional[UserShort] = None
@@ -460,7 +451,7 @@ class DirectThread(TypesBaseModel):
 
     def is_seen(self, user_id: str):
         """Have I seen this thread?
-        :param user_id: You account user_id
+        :param user_id: Your account user_id
         """
         user_id = str(user_id)
         own_timestamp = int(self.last_seen_at[user_id]["timestamp"])
@@ -499,8 +490,8 @@ class RelationshipShort(TypesBaseModel):
 
 
 class Highlight(TypesBaseModel):
-    pk: str  # 17895485401104052
-    id: str  # highlight:17895485401104052
+    pk: str
+    id: str
     latest_reel_media: int
     cover_media: dict
     user: UserShort
